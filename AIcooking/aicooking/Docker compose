@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  # ── FastAPI AI service ─────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - FRONTEND_URL=http://localhost:3000
+    restart: unless-stopped
+
+  # ── Node.js signaling server ───────────────────────────────────────────────
+  signaling:
+    build:
+      context: ./backend-signaling
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-supersecretchangeme}
+      - FRONTEND_URL=http://localhost:3000
+    restart: unless-stopped
+
+  # ── Next.js frontend ───────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SIGNALING_URL=http://localhost:4000
+      - NEXT_PUBLIC_AI_SERVICE_URL=http://localhost:8000
+    depends_on:
+      - signaling
+      - ai-service
+    restart: unless-stopped
